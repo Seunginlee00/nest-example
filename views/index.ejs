@@ -1,0 +1,31 @@
+<html>
+  <head>
+    <title>Express</title>
+    <link rel="stylesheet" href="/stylesheets/style.css" />
+  </head>
+
+  <body>
+    <h1>Express</h1>
+    <p>Welcome to Express</p>
+    <form action="/notice" method="POST">
+      <div class="form-group">
+        <label>공지 제목</label>
+        <input type="text" class="form-control" name="msg" />
+        <input type="hidden" name="notiIdx" value="0" />
+        <input type="hidden" name="isApi" value="0" />
+      </div>
+
+      <div class="form-group">
+        <label>공지 유형</label>
+        <select name="notiType" id="type">
+          <option value="general">일반</option>
+          <option value="emergency">긴급</option>
+          <option value="unit">작전</option>
+          <option value="approve">신청</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-outline-secondary">Submit</button>
+    </form>
+  </body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>채팅방 생성</title>
+  <style>
+    .list-box {
+      width: 200px;
+      height: 300px;
+      border: 1px solid #444;
+      overflow-y: auto;
+      background: #def;
+      margin: 10px;
+    }
+    .container {
+      cursor: pointer;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .buttons {
+
+      display: flex;
+      flex-direction: column;
+      margin: 0 20px;
+    }
+    .buttons button {
+      margin: 5px;
+      width: 40px;
+      height: 40px;
+    }
+
+    .selected {
+      background-color: lightgray;
+    }
+
+
+      /* ✅ 손모양 커서 */
+  #allMembers div,
+  #selectedMembers div {
+    cursor: pointer;
+  }
+  </style>
+</head>
+<body>
+  <h1>채팅방 생성</h1>
+
+  <div class="container">
+    <!-- 왼쪽 모든 회원 -->
+    <div class="list-box" id="allMembers">
+      <% members.forEach(member => { %>
+        <div data-id="<%= member.tm_idx %>"><%= member.user_name %></div>
+      <% }) %>
+    </div>
+
+    <!-- 가운데 버튼 -->
+    <div class="buttons">
+      <button onclick="addSelected()">➡</button>
+      <button onclick="removeSelected()">⬅</button>
+    </div>
+
+    <!-- 오른쪽 선택된 회원 -->
+    <div class="list-box" id="selectedMembers">
+      <!-- 선택한 사용자 표시됨 -->
+    </div>
+  </div>
+
+  <button onclick="createRoom()">생성하기</button>
+
+  <script>
+    let selected = [];
+
+    // 클릭 시 highlight 토글
+    document.addEventListener('click', function(e) {
+      if (e.target.closest('#allMembers div')) {
+        e.target.classList.toggle('selected');
+      } else if (e.target.closest('#selectedMembers div')) {
+        e.target.classList.toggle('selected');
+      }
+    });
+
+    function addSelected() {
+      const all = document.querySelectorAll('#allMembers .selected');
+      const selectedBox = document.getElementById('selectedMembers');
+
+      all.forEach(el => {
+        el.classList.remove('selected');
+        selectedBox.appendChild(el);
+      });
+    }
+
+    function removeSelected() {
+      const sel = document.querySelectorAll('#selectedMembers .selected');
+      const allBox = document.getElementById('allMembers');
+
+      sel.forEach(el => {
+        el.classList.remove('selected');
+        allBox.appendChild(el);
+      });
+    }
+
+    function createRoom() {
+      console.log("이게 무야,,");
+      
+      const selectedBox = document.getElementById('selectedMembers');
+      const members = selectedBox.querySelectorAll('div');
+      const userId = Array.from(members).map(el => Number(el.dataset.id));
+      const userName = Array.from(members).map(el => el.textContent);
+
+      const data = {
+        userId,
+        userName,
+        regId: 1
+      };
+
+      fetch('/chat/room/create', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log('서버 응답:', data);
+        alert('채팅방이 생성되었습니다.');
+      })
+      .catch(err => console.error(err));
+    }
+  </script>
+</body>
+</html>

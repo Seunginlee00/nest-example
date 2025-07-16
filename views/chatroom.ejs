@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>채팅방 리스트</title>
+</head>
+<body>
+  <h1>채팅방 리스트</h1>
+
+<ul>
+  <% roomList.forEach(room => { %>
+    <li>
+      <a href="/chat/room/<%= room.topic %>">
+        <strong>방ID:</strong> <%= room.topic %><br>
+        <strong>regIdx:</strong> <%= room.reg_idx %><br>
+        <strong>만든날짜:</strong>
+        <%= room.reg_datetime ? room.reg_datetime.toISOString().substring(0, 10) : '' %>
+      </a>
+    </li>
+  <% }) %>
+</ul>
+
+
+</body>
+</html>

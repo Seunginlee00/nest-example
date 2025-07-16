@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>채팅방 선택</title>
+    <script src="/socket.io/socket.io.js"></script>  
+</head>
+<body>
+    <h1>채팅방 선택</h1>
+    <select name="category" id="category-select">
+    <% categories.forEach(cat => { %>
+        <option value="<%= cat.cr_idx %>"><%= cat.topic %></option>
+    <% }) %>
+    </select>
+
+    <select id="members">
+        <option value="">-- 먼저 채팅방을 선택하세요 --</option>
+    </select>
+    <button onclick="subscribeToTopic()">확인</button>
+
+    <ul id="messages"></ul>
+    
+    <script>
+        const socket = io('http://localhost:3000');
+        
+        function subscribeToTopic() {
+          const selectElement = document.getElementById("category-select");
+          const selectedText = selectElement.options[selectElement.selectedIndex].text;
+          console.log("selectedText : " + selectedText);
+        
+          // 서버에게 이 방에 join 하라고 요청
+          socket.emit('joinRoom', { room: selectedText, user: '홍길동' });
+        }
+        
+        // 서버에서 chat 메시지를 받으면 화면에 출력
+        socket.on('chat', function(msg) {
+          const li = document.createElement('li');
+          li.textContent = msg;
+          document.getElementById('messages').appendChild(li);
+        });
+        
+        // 서버에서 notice (공지) 를 받으면 출력
+        socket.on('notice', function(msg) {
+          const li = document.createElement('li');
+          li.textContent = '[공지] ' + msg;
+          document.getElementById('messages').appendChild(li);
+        });
+        
+        const eventListener = async function() {
+          const cr_idx = this.value;
+          const memberSelect = document.getElementById('members');
+        
+          memberSelect.innerHTML = '<option>로딩 중...</option>';
+        
+          const res = await fetch('/chat/member?cr_idx='+cr_idx);
+          const data = await res.json();
+        
+          memberSelect.innerHTML = '';
+          data.forEach(member => {
+            const option = document.createElement('option');
+            option.value = member.user_idx;
+            option.textContent = member.user_name;
+            memberSelect.appendChild(option);
+          });
+        };
+        
+        document.getElementById('category-select').addEventListener('change', eventListener);
+        document.getElementById('category-select').addEventListener('click', eventListener);
+        </script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model tb_mq_message {
+  mq_idx        Int      @id @default(autoincrement())
+  topic         String
+  target_idx    Int
+  msg           String
+  priority      Int    @default(0)      // 0: low, 1: medium, 2: high
+  reg_datetime  DateTime
+}
+
+model tb_chat_room {
+  cr_idx        Int @id @default(autoincrement()) // 자동 증가 
+  topic         String
+  reg_idx       Int
+  reg_datetime  DateTime
+  is_del        Boolean
+
+  chat_member   tb_chat_member[]  // 관계  (1:N)
+}
+
+
+model tb_chat_member {
+  cm_idx        Int   @id @default(autoincrement()) // 자동 증가
+  user_idx      Int
+  user_name     String
+  chat_datetime DateTime
+  is_del        Boolean
+
+  cr_idx        Int
+  chat_room     tb_chat_room     @relation(fields: [cr_idx], references: [cr_idx])
+}
+
+
+
+model tb_test_member {
+  tm_idx        Int   @id @default(autoincrement()) // 자동 증가
+  user_name     String
+  created_datetime DateTime
+  is_del        Boolean
+}
