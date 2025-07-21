@@ -1,13 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { MqttService } from '../mqtt/mqtt.service';
-
-interface CreateNoticeDto {
-  msg: string;
-  notiType: string;
-  notiIdx: number;
-  isApi: number;
-}
+import { CreateNoticeDto } from './../dto/CreateNoticeDto';
 
 @Injectable()
 export class NoticeService {
@@ -23,15 +17,17 @@ export class NoticeService {
   // | `notice/unitstate` | 낮음 (자동삭제) | `QoS = 0` |
   // | `notice/(교관군번)`    | 높음        | `QoS = 1` |
 
-  async createNotice({
-    msg,
-    notiType,
-    notiIdx,
-    isApi,
-  }: CreateNoticeDto): Promise<{ code: number; result: string }> {
-    if (!msg || !notiType || !notiIdx) {
-      throw new Error('필수 값이 누락되었습니다.');
-    }
+  async createNotice(
+    createNoticeDto: CreateNoticeDto,
+  ): Promise<{ code: number; result: string }> {
+    console.log('💬 createNotice 호출됨');
+    console.log('📦 DTO:', createNoticeDto);
+
+    const { msg, notiType, notiIdx, isApi } = createNoticeDto;
+
+    console.log('📄 msg:', msg);
+    console.log('📄 notiType:', notiType);
+    console.log('📄 notiIdx:', notiIdx);
 
     const topic = `notice/${notiType}`;
     const date = new Date();

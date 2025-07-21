@@ -1,6 +1,7 @@
 import { Controller, Post, Body, Get, Render, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { NoticeService } from './notice.service';
+import { CreateNoticeDto } from './../dto/CreateNoticeDto';
 
 @Controller('notice')
 export class NoticeController {
@@ -8,20 +9,19 @@ export class NoticeController {
 
   @Post()
   async createNotice(
-    @Body('msg') msg: string,
-    @Body('notiType') notiType: string,
-    @Body('notiIdx') notiIdx: number,
-    @Body('isApi') isApi: number,
-    @Res() res: Response, // 🔥 Express Response 객체 주입
+    @Body() createNoticeDto: CreateNoticeDto,
+    // @Res() res: Response, // 🔥 Express Response 객체 주입
   ) {
-    await this.noticeService.createNotice({
-      msg,
-      notiType,
-      notiIdx,
-      isApi,
-    });
+    console.log(createNoticeDto.isApi);
+    console.log(createNoticeDto.notiIdx);
+    await this.noticeService.createNotice(createNoticeDto); // ✅
 
-    return res.redirect('/'); // ✅ 처리 후 메인으로 리다이렉트
+    return {
+      success: true,
+      message: '공지사항이 성공적으로 생성되었습니다.',
+    };
+
+    // return res.redirect('/'); // ✅ 처리 후 메인으로 리다이렉트
   }
 
   @Get()
