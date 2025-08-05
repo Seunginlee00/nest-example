@@ -4,11 +4,17 @@
     "target": "es2017",
     "outDir": "./dist",
     "rootDir": "./src",
+    "allowJs": true, // ← JS 파일도 컴파일 대상에 포함
+    "checkJs": false, // ← 필요하면 JS에서도 타입 검사하게 할 수 있지만, false가 기본 편
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.js", // ← JS 파일도 포함
+    "src/**/*.vue"
+  ],
   "exclude": ["node_modules", "dist"]
 }

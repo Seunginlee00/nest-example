@@ -52,3 +52,96 @@ model tb_test_member {
   created_datetime DateTime
   is_del        Boolean
 }
+
+
+model code_detail {
+  group_id         BigInt
+  code_id          BigInt @id @default(autoincrement()) // AI 
+  code_label       String?
+  rgst_nm          String      @default("system")
+  disabled         String      @db.Char(1) @default("N")
+  rgst_dt          DateTime    @default(now())
+  upd_dt           DateTime?   @updatedAt
+  upd_nm           String      @default("system")
+  upper_cd         BigInt?
+  code_description String?
+}
+
+model code_group {
+  group_id     BigInt      @id
+  group_nm     String
+  group_desc   String?
+  rgst_dt      DateTime    @default(now())
+  upd_dt       DateTime?   @updatedAt
+  disabled     String      @db.Char(1) @default("N")
+  rgst_nm      String      @default("system")
+  upd_nm       String      @default("system")
+}
+
+model push_msg_group {
+  push_group_seq       Int      @id @default(autoincrement())    // 메시지 그룹 시퀀스(PK)
+  push_type            String                                  // 메시지 유형
+  push_title           String                                  // 메시지 제목
+  push_message         String                                  // 메시지 본문
+  rgst_dt              DateTime   @default(now())              // 등록 일시
+  sys_cid              String?                                 // 시스템 CID
+  dev_cid              String?                                 // 디바이스 CID
+  dev_eqp_addr         String?                                 // 장비 주소
+  gis_lct              String?                                 // 위치 정보
+  unit_addr            String?                                 // 부대 주소
+  mltr_rgn             String?                                 // 군구
+  mltr_crps            String?                                 // 군단
+  mltr_div             String?                                 // 사단
+  mltr_bde             String?                                 // 여단
+  mltr_bn              String?                                 // 대대
+  sys_cd               String?                                 // 시스템 코드
+  idtf_cd              String?                                 // 식별 코드
+  admin_sn             String?                                 // 관리자 일련번호
+  snd_admin_sn         String?                                 // 발신 관리자 일련번호
+  key_use_yn           String?                                 // 키 사용 여부
+  card_key_use_yn      String?                                 // 카드 키 사용 여부
+  gate_pwd             String?                                 // 게이트 비밀번호
+  memo_txt             String?                                 // 메모
+  inst_name            String?                                 // 기관명
+  inst_dt              DateTime?  @default(now())              // 기관 일시
+  inst_tel1            String?                                 // 기관 전화번호1
+  inst_tel2            String?                                 // 기관 전화번호2
+  inst_sn              String?                                 // 기관 일련번호
+  admin_department     String?                                 // 관리자 부서
+  detail_location      String?                                 // 상세 위치
+  regi_id              String?                                 // 등록자 ID
+  updt_dt              DateTime?  @updatedAt                   // 수정 일시
+  event_type           String?                                 // 이벤트 유형
+  serial_num           String?                                 // 일련번호
+  send_type            String?                                 // 발송 유형
+  send_sral_rank       String?                                 // 발신자 계급
+  send_sral_group_code String?                                 // 발신자 그룹 코드
+  send_sral_nmbr       String?                                 // 발신자 일련번호
+  bg_color             String?                                 // SOP 발생 타임
+  // 추가
+  qos_level            Int      @default(1)                    // qos_level (0,1,2)
+  max_retries          Int      @default(3)                    // 최대 전송 횟수
+  retry_interval       String   @default("1 second")            // 재전송 간격
+  ordering_key         String?                                 // 순차 처리 키
+  expire_at            DateTime?                               // 메시지 만료 시각
+  status               String   @db.Char(1) @default("P")      // 전체 그룹 상태
+}
+
+model push_msg_detail {
+  push_detail_seq       Int      @id @default(autoincrement())         // 메시지 상세 시퀀스(PK)
+  push_group_seq        Int                                            // 메시지 그룹 시퀀스
+  usr_sral_nmbr         String                                         // 사용자 일련번호
+  recv_dt               DateTime?                                      // 수신 일시
+  expect_dt             DateTime  @default(now())                      // 발송 예정 일시
+  sent_count            Int       @default(0)                          // 발송 시도 횟수
+  recv_nm               String?                                        // 수신자명
+  recv_sral_rank        String?                                        // 수신자 계급
+  recv_sral_group_code  String?                                        // 수신자 그룹 코드
+  recv_sral_group       String?                                        // 수신자 그룹명
+  recv_read_dt          DateTime?                                      // 수신자 확인 일시
+// 추가
+  status                String   @db.Char(1)                           // 발송 상태 (P=대기, S=발송완료, R=재시도중, F=최종실패)
+  last_attempt_dt       DateTime?                                      // 마지막 발송/재전송 시도 시각
+  next_retry_dt         DateTime?                                      // 다음 재시도 예정 시각
+  sequence_num          Int                                            // 그룹 내 순번 (ordering_key 별 순차 처리)
+}
