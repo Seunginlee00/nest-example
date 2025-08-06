@@ -2,21 +2,22 @@
   <div class="mqtt-chat-app">
     <div class="header">
       <h1>Vue 3 + MQTT.js 채팅</h1>
-      <div class="connection-status" :class="{ connected: isConnected }">
-        {{ connectionStatus }}
+      <div class="connection-status" :class="{ connected: isConnectedMqtt && isConnectedSocket }">
+        MQTT: {{ isConnectedMqtt ? '연결됨' : '해제됨' }} /
+        Socket.io: {{ isConnectedSocket ? '연결됨' : '해제됨' }}
       </div>
     </div>
 
     <!-- 연결 설정 -->
-    <div class="connection-panel" v-if="!isConnected">
+    <div class="connection-panel" v-if="!isConnectedMqtt || !isConnectedSocket">
       <h3>MQTT 브로커 연결</h3>
       <div class="form-group">
         <label>브로커 주소:</label>
-        <input v-model="connection.host" placeholder="localhost" />
+        <input v-model="connection.host" placeholder="localhost"/>
       </div>
       <div class="form-group">
         <label>포트:</label>
-        <input v-model="connection.port" type="number" placeholder="8083" />
+        <input v-model="connection.port" type="number" placeholder="8083"/>
       </div>
       <div class="form-group">
         <label>사용자명:</label>
@@ -29,11 +30,7 @@
           로그인 정보에서 자동 설정됨
         </small>
       </div>
-      <button
-        @click="connectAndJoin"
-        :disabled="isConnecting"
-        class="connect-btn"
-      >
+      <button @click="connectAndJoin" :disabled="isConnectingMqtt" class="connect-btn">
         {{ isConnecting ? '연결 중...' : '채팅 시작' }}
       </button>
     </div>
@@ -53,26 +50,18 @@
           class="message"
           :class="{
             'my-message': message.parsedPayload?.user === userName,
-            'system-message': message.parsedPayload?.type !== 'message',
+            'system-message': message.parsedPayload?.type !== 'message'
           }"
         >
           <div class="message-header">
-            <span class="username">{{
-              message.parsedPayload?.user || '시스템'
-            }}</span>
+            <span class="username">{{ message.parsedPayload?.user || '시스템' }}</span>
             <span class="timestamp">{{ formatTime(message.receivedAt) }}</span>
           </div>
           <div class="message-content">
-            <span
-              v-if="message.parsedPayload?.type === 'join'"
-              class="system-text"
-            >
+            <span v-if="message.parsedPayload?.type === 'join'" class="system-text">
               {{ message.parsedPayload.user }}님이 입장했습니다.
             </span>
-            <span
-              v-else-if="message.parsedPayload?.type === 'leave'"
-              class="system-text"
-            >
+            <span v-else-if="message.parsedPayload?.type === 'leave'" class="system-text">
               {{ message.parsedPayload.user }}님이 퇴장했습니다.
             </span>
             <span v-else>
@@ -88,12 +77,10 @@
           v-model="newMessage"
           @keyup.enter="sendMessage"
           placeholder="메시지를 입력하세요..."
-          :disabled="!isConnected"
+          :disabled="!isConnectedMqtt || !isConnectedSocket"
         />
-        <button
-          @click="sendMessage"
-          :disabled="!newMessage.trim() || !isConnected"
-        >
+        <button @click="sendMessage"
+                :disabled="!newMessage.trim() || !isConnectedMqtt || !isConnectedSocket">
           전송
         </button>
       </div>
@@ -115,141 +102,139 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, watch, onMounted } from 'vue';
-import { useMqttChat } from '@/composables/useMqtt.js';
-import { useSocketio } from '@/composables/useSocketio.js';
+import {ref, computed, nextTick, watch, onMounted} from 'vue'
+import {useMqttChat} from '@/composables/useMqtt.js'
+import {useSocketio} from "@/composables/useSocketIo";
 
 // Composable 사용
 const {
-  isConnected,
+  isConnected: isConnectedMqtt,
   isConnecting,
   connectionStatus,
-  messages,
+  messages: messagesMqtt,
   subscribedTopics,
   connection,
   currentRoom,
   userName,
   chatMessages,
-  connect,
+  connectMqtt,
   joinRoom,
   leaveRoom,
   sendChatMessage,
   clearMessages,
-  disconnect,
+  disconnect
 } = useMqttChat({
   host: '115.68.194.78',
-  port: 1883,
+  port: 8083,
   onMessage: (message) => {
-    console.log('새 메시지:', message);
-    scrollToBottom();
-  },
-});
+    console.log('새 메시지:', message)
+    scrollToBottom()
+  }
+})
 
 const {
   socket,
-  isConnected: isSocketConnected,
-  messages: socketMessages,
-  connect: connectSocket,
+  isConnected: isConnectedSocket,
+  messages: messagesSocket,
+  connectSocket,
   sendMessage: sendSocketMessage,
 } = useSocketio({
   host: '115.68.194.78',
   port: 9000,
-  path: '/mqtt',
 });
 
 // 로컬 상태
-const newMessage = ref('');
-const showDebug = ref(false);
-const messagesContainer = ref(null);
-const roomName = ref('general');
-const isUserNameFromStore = ref(false); // 사용자명이 store에서 온 것인지 확인
+const newMessage = ref('')
+const showDebug = ref(false)
+const messagesContainer = ref(null)
+const roomName = ref('general')
+const isUserNameFromStore = ref(false) // 사용자명이 store에서 온 것인지 확인
 
 // loginStore에서 사용자명 설정
-// onMounted(() => {
-//   try {
-//     // loginStore.user에서 사용자 정보 가져오기
-//     if (loginStore.user?.userNm && loginStore.user?.rnkNm) {
-//       userName.value = `${loginStore.user.userNm} ${loginStore.user.rnkNm}`;
-//       isUserNameFromStore.value = true;
-//       console.log('로그인 사용자명 설정:', userName.value);
-//     } else {
-//       userName.value = `User_${Math.random().toString(16).substring(2, 6)}`;
-//       isUserNameFromStore.value = false;
-//       console.log('기본 사용자명 사용:', userName.value);
-//     }
-//   } catch (error) {
-//     console.error('loginStore 접근 에러:', error);
-//     userName.value = `User_${Math.random().toString(16).substring(2, 6)}`;
-//     isUserNameFromStore.value = false;
-//   }
-// });
+onMounted(() => {
+  try {
+    // loginStore.user에서 사용자 정보 가져오기
+    userName.value = `User_${Math.random().toString(16).substring(2, 6)}`
+    isUserNameFromStore.value = false
+    console.log('기본 사용자명 사용:', userName.value)
+  } catch (error) {
+    console.error('loginStore 접근 에러:', error)
+    userName.value = `User_${Math.random().toString(16).substring(2, 6)}`
+    isUserNameFromStore.value = false
+  }
+})
 
 // 표시할 메시지 계산
 const displayMessages = computed(() => {
-  return chatMessages.value.filter(
-    (msg) => msg.topic === `chat/${currentRoom.value}`,
-  );
-});
+  return chatMessages.value.filter(msg =>
+    msg.topic === `chat/${currentRoom.value}`
+  )
+})
 
 // 연결 및 채팅방 입장
 const connectAndJoin = async () => {
   try {
-    await connect();
-    await joinRoom(roomName.value, userName.value);
+    await connectMqtt()
+    await connectSocket()
+    await joinRoom(roomName.value, userName.value)
   } catch (error) {
-    console.error('연결 실패:', error);
-    alert(`연결 실패: ${error.message}`);
+    console.error('연결 실패:', error)
+    alert(`연결 실패: ${error.message}`)
   }
-};
+}
 
 // 채팅방 나가기
 const leaveChatRoom = async () => {
   try {
-    await leaveRoom();
-    await disconnect();
+    await leaveRoom()
+    await disconnect()
   } catch (error) {
-    console.error('채팅방 나가기 실패:', error);
+    console.error('채팅방 나가기 실패:', error)
   }
-};
+}
 
 // 메시지 전송
 const sendMessage = async () => {
-  if (!newMessage.value.trim()) return;
+  if (!newMessage.value.trim()) {
+    return
+  }
 
   try {
-    await sendChatMessage(newMessage.value);
-    newMessage.value = '';
+    await sendChatMessage(newMessage.value)
+    newMessage.value = ''
   } catch (error) {
-    console.error('메시지 전송 실패:', error);
-    alert(`메시지 전송 실패: ${error.message}`);
+    console.error('메시지 전송 실패:', error)
+    alert(`메시지 전송 실패: ${error.message}`)
   }
-};
+}
 
 // 시간 포맷팅
 const formatTime = (date) => {
-  if (!date) return '';
+  if (!date) {
+    return ''
+  }
   return new Date(date).toLocaleTimeString('ko-KR', {
     hour: '2-digit',
-    minute: '2-digit',
-  });
-};
+    minute: '2-digit'
+  })
+}
 
 // 스크롤을 맨 아래로
 const scrollToBottom = () => {
   nextTick(() => {
     if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
     }
-  });
-};
+  })
+}
 
 // 새 메시지가 올 때마다 스크롤
 watch(
   () => displayMessages.value.length,
   () => {
-    scrollToBottom();
-  },
-);
+    scrollToBottom()
+  }
+)
 </script>
 
 <style scoped>
