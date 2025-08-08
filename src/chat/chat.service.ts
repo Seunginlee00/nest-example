@@ -25,6 +25,7 @@ export class ChatService implements OnModuleInit {
     });
   }
 
+
   async createChatting(
     msg: string,
     chattingRoomId: number,
@@ -35,12 +36,12 @@ export class ChatService implements OnModuleInit {
 
     const topic = `chatting/${chattingRoomId}`;
     const date = new Date();
-    const inserted = await this.prisma.tb_mq_message.create({
-      data: { topic, target_idx: regID, msg, reg_datetime: date },
-    });
+    // const inserted = await this.prisma.tb_mq_message.create({
+    //   data: { topic, target_idx: regID, msg, reg_datetime: date },
+    // });
 
     const message = {
-      mq_idx: inserted.mq_idx,
+      // mq_idx: inserted.mq_idx,
       regId: regID,
       regName,
       regDate: date.toISOString(),
@@ -71,21 +72,21 @@ export class ChatService implements OnModuleInit {
       },
     });
 
-    const roomsWithMessages = await Promise.all(
-      rooms.map(async (room) => {
-        const latestMessage = await this.prisma.tb_mq_message.findFirst({
-          where: { topic: 'chatting/' + room.topic },
-          orderBy: { reg_datetime: 'desc' },
-        });
-
-        return {
-          cr_idx: room.cr_idx,
-          members: room.chat_member.map((m) => m.user_name),
-          last_msg: latestMessage?.msg ?? '',
-          last_time: latestMessage?.reg_datetime ?? '',
-        };
-      }),
-    );
+    // const roomsWithMessages = await Promise.all(
+    //   rooms.map(async (room) => {
+    //     const latestMessage = await this.prisma.tb_mq_message.findFirst({
+    //       where: { topic: 'chatting/' + room.topic },
+    //       orderBy: { reg_datetime: 'desc' },
+    //     });
+    //
+    //     return {
+    //       cr_idx: room.cr_idx,
+    //       members: room.chat_member.map((m) => m.user_name),
+    //       last_msg: latestMessage?.msg ?? '',
+    //       last_time: latestMessage?.reg_datetime ?? '',
+    //     };
+    //   }),
+    // );
 
     // const rooms = this.prisma.tb_chat_room.findMany({
     //   where: { is_del: false },
@@ -104,9 +105,13 @@ export class ChatService implements OnModuleInit {
     // });
   }
 
-  async getChatRooms() {
-    return await this.prisma.tb_chat_room.findMany({
-      where: { is_del: false },
+  // user명에 따른 방 조회
+  async getChatRooms( user_id : string) {
+    return this.prisma.tb_chat_room.findMany({
+      where: {
+        is_del: false,
+        chat_member: { some: { user_id: user_id } } // ← 이 한 줄로 회원 여부 필터
+      },
       orderBy: { reg_datetime: 'desc' },
     });
   }
@@ -121,37 +126,36 @@ export class ChatService implements OnModuleInit {
   }
 
   // 룸 생성
-
   async createRoom(chattingRoomCode: string, createRoomDto: CreateRoomDto) {
-    const { userId, userName, regId } = createRoomDto;
-
-    if (!chattingRoomCode || !userName || !regId) return;
+    const { user_idx, user_id,  join_type, chat_type} = createRoomDto;
+    const memberInsert = [];
+    if (!chattingRoomCode || !user_idx || !join_type || !chat_type) return;
 
     const date = new Date();
 
+
     // 1️⃣ 채팅방 생성
-    const room = await this.prisma.tb_chat_room.create({
+    const newRoom = await this.prisma.tb_chat_room.create({
       data: {
         topic: chattingRoomCode,
-        reg_idx: regId,
-        reg_datetime: date,
+        reg_idx : 1,
         is_del: false,
+        chat_type: chat_type
       },
     });
 
-    await this.prisma.$transaction([
-      ...userId.map((uid, idx) =>
-        this.prisma.tb_chat_member.create({
-          data: {
-            user_idx: uid,
-            user_name: userName[idx],
-            is_del: false,
-            cr_idx: room.cr_idx,
-            chat_datetime: date,
-          },
-        }),
-      ),
-    ]);
+    if(user_idx.length ==  user_id.length){
+      for (let i = 0; i < user_idx.length; i++) {
+        memberInsert.push({
+          join_type: join_type,
+          cr_idx: newRoom.cr_idx,
+          user_idx: user_idx[i],
+          user_id: user_id[i],
+        });
+    }
+      this.prisma.tb_chat_member.createMany({data : memberInsert});
+    }
+
   }
 
   // 룸 참여자 리스트 + 룸 데이터
@@ -184,15 +188,15 @@ export class ChatService implements OnModuleInit {
       throw new Error('roomId, sender, message는 모두 필수입니다.');
     }
     const topic = 'chatting/' + roomId;
-    const saved = await this.prisma.tb_mq_message.create({
-      data: {
-        topic: topic,
-        target_idx: sender, // 체팅방 멤버 로 추청
-        msg: message,
-        priority: 0,
-        reg_datetime: new Date(),
-      },
-    });
+    // const saved = await this.prisma.tb_mq_message.create({
+    //   data: {
+    //     topic: topic,
+    //     target_idx: sender, // 체팅방 멤버 로 추청
+    //     msg: message,
+    //     priority: 0,
+    //     reg_datetime: new Date(),
+    //   },
+    // });
 
     // 안전하게 MQTT publish
     try {
@@ -201,7 +205,7 @@ export class ChatService implements OnModuleInit {
         JSON.stringify({
           sender,
           message,
-          time: saved.reg_datetime?.toISOString() ?? new Date().toISOString(),
+          // time: saved.reg_datetime?.toISOString() ?? new Date().toISOString(),
         }),
       );
     } catch (err) {
@@ -214,7 +218,7 @@ export class ChatService implements OnModuleInit {
         topic: topic,
         sender,
         message,
-        time: saved.reg_datetime?.toISOString() ?? new Date().toISOString(),
+        // time: saved.reg_datetime?.toISOString() ?? new Date().toISOString(),
       });
     } catch (err) {
       console.error('Socket emit 실패', err);

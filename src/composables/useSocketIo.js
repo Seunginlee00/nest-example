@@ -20,8 +20,6 @@ export function useSocketio(options = {}) {
       return;
     }
 
-    console.log("함수실행")
-
     socket.value = io(`ws://${config.host}:${config.port}`, {
       path: config.path,
       transports: ['websocket', 'polling'],

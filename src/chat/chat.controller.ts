@@ -14,12 +14,20 @@ import { UserService } from '../user/user.service';
 import { CreateRoomDto } from '../dto/CreateRoomDto';
 import { CreateChatDto } from '../dto/CreateChatDto';
 
-@Controller('chat')
+@Controller('/api/chat')
 export class ChatController {
   constructor(
     private readonly chatService: ChatService,
     private readonly userService: UserService, // 🔥 여기 주입
   ) {}
+
+
+  // 회원 리스트 가져오기
+  @Get('create/members')
+  async getMemberList() {
+    const members = await this.chatService.getMemberList();
+    return { members }; // EJS 로 members 넘김
+  }
 
   // 룸 생성 페이지 렌더링
   @Get('room/create')
@@ -34,10 +42,6 @@ export class ChatController {
   @Post('room/create')
   async postRoomCreate(@Body() CreateRoomDto: CreateRoomDto) {
     const chattingRoomCode = this.userService.generateRandomString(32); // ✅ 이렇게 사용
-
-    console.log('chattingRoomCode', chattingRoomCode);
-    console.log('CreateRoomDto', CreateRoomDto);
-
     const members = await this.chatService.createRoom(
       chattingRoomCode,
       CreateRoomDto,
@@ -46,18 +50,25 @@ export class ChatController {
   }
 
   // 룸 리스트 페이지 렌더링
-  @Get('rooms')
-  @Render('chatroom')
-  async getChatRooms() {
-    const roomList = await this.chatService.getChatRooms();
-    console.log('roomList', roomList);
+  @Get('rooms/chatroom')
+  async getChatRoomsAPI(@Param() userId : string) {
+    const roomList = await this.chatService.getChatRooms(userId);
     return { roomList };
   }
 
-  @Get('roominfo')
-  async getRoomInfo() {
-    return await this.chatService.getChatRooms();
+
+  // 룸 리스트 페이지 렌더링
+  @Get('rooms')
+  @Render('chatroom')
+  async getChatRooms(@Param() userId : string) {
+    const roomList = await this.chatService.getChatRooms(userId);
+    return { roomList };
   }
+
+  // @Get('roominfo')
+  // async getRoomInfo() {
+  //   return await this.chatService.getChatRooms();
+  // }
 
   @Get('member')
   async getMembers(@Query('cr_idx') cr_idx: string) {
@@ -73,22 +84,22 @@ export class ChatController {
 
   // 룸 대화 내용 랜더링,,
 
-  @Get('room/:roomId')
-  @Render('chatting') // chatRoom.ejs
-  async getChatRoomDetail(@Param('roomId') roomId: string) {
-    const { memberList, messages } =
-      await this.chatService.getRoomDetail(roomId);
-
-    const messagesWithNames = messages.map((msg) => {
-      const target = memberList.find((m) => m.cm_idx === msg.target_idx);
-      return {
-        ...msg,
-        target_name: target ? target.user_name : '',
-      };
-    });
-
-    return { roomId, memberList, messages: messagesWithNames };
-  }
+  // @Get('room/:roomId')
+  // @Render('chatting') // chatRoom.ejs
+  // async getChatRoomDetail(@Param('roomId') roomId: string) {
+  //   const { memberList, messages } =
+  //     await this.chatService.getRoomDetail(roomId);
+  //
+  //   const messagesWithNames = messages.map((msg) => {
+  //     const target = memberList.find((m) => m.cm_idx === msg.target_idx);
+  //     return {
+  //       ...msg,
+  //       target_name: target ? target.user_name : '',
+  //     };
+  //   });
+  //
+  //   return { roomId, memberList, messages: messagesWithNames };
+  // }
 
   // 데이터 보냄 ..
 

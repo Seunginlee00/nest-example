@@ -4,12 +4,15 @@ import { IsArray, IsNumber, IsString } from 'class-validator';
 export class CreateRoomDto {
   @IsArray()
   @IsNumber({}, { each: true })
-  userId!: number[];
+  user_idx!: number[];
 
   @IsArray()
   @IsString({ each: true })
-  userName!: string[];
+  user_id!: string[];
 
-  @IsNumber()
-  regId!: number;
+  @IsString()
+  join_type!: string; // 추가된 사람인지
+
+  @IsString()
+  chat_type!: string; // 그룹방인지 일대일인지
 }

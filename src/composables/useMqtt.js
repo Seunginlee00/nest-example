@@ -12,6 +12,7 @@ export function useMqtt(options = {}) {
   const subscribedTopics = ref(new Set())
   const connectionError = ref(null)
 
+
   // 기본 연결 설정
   const defaultConnection = {
     host: '115.68.194.237',

@@ -8,8 +8,73 @@
       </div>
     </div>
 
+
+    <!--     일단 방생성부터 -->
+    <!--    회원 리스트  -->
+
+
+
+    <!--    채팅방 생성     -->
+    <div v-if="step === 'createRoom'">
+      <h3>채팅 방 만들기</h3>
+
+
+      <div>
+        이게 생기나요?
+        <div v-if="isLoading">불러오는 중...</div>
+
+        <ul v-else>
+          <li v-for="(member, index) in members" :key="index">
+            {{ member.user_name }} ({{ member.user_id }})
+          </li>
+        </ul>
+
+
+      </div>
+
+<!--      <div class="form-group">-->
+<!--        <label>회원명(또는 아이디)</label>-->
+<!--        <input-->
+<!--          v-model="userId"-->
+<!--          placeholder="회원명을 넣어주세요"-->
+<!--          @keyup="onUserIdEnter"-->
+<!--        />-->
+<!--        <button @click="searchRooms">검색</button>-->
+<!--      </div>-->
+
+      <!-- 검색 결과 리스트 -->
+<!--      <ul v-else>-->
+<!--        <li v-if="rooms.length === 0">검색 결과가 없습니다.</li>-->
+<!--        <li-->
+<!--          v-for="room in rooms"-->
+<!--          :key="room.cr_idx"-->
+<!--          @click="selectRoom(room)"-->
+<!--          style="cursor:pointer; padding:6px 0; border-bottom:1px solid #eee"-->
+<!--          title="클릭하면 선택됩니다"-->
+<!--        >-->
+<!--          <strong>{{ room.topic }}</strong>-->
+<!--          <span style="color:#666;"> ({{ room.chat_type }})</span>-->
+<!--          &lt;!&ndash; 필요하면 만든 날짜 등도 표시 &ndash;&gt;-->
+<!--          &lt;!&ndash; <small> {{ new Date(room.reg_datetime).toLocaleString() }} </small> &ndash;&gt;-->
+<!--        </li>-->
+<!--      </ul>-->
+
+
+      <input v-model="roomName" placeholder="방 이름을 입력하세요" />
+      <button @click="step = 'connection'">다음</button>
+    </div>
+
+
+    <!--    채팅방 선택     -->
+<!--    <div v-if="step === 'choiceRoom'">-->
+<!--      <h3>채팅방 선택</h3>-->
+<!--      <input v-model="roomName" placeholder="방 이름을 입력하세요" />-->
+<!--      <button @click="step = 'connection'">다음</button>-->
+<!--    </div>-->
+
+
     <!-- 연결 설정 -->
-    <div class="connection-panel" v-if="!isConnectedMqtt || !isConnectedSocket">
+    <div class="connection-panel" v-else-if="step === 'connection'">
       <h3>MQTT 브로커 연결</h3>
       <div class="form-group">
         <label>브로커 주소:</label>
@@ -36,7 +101,7 @@
     </div>
 
     <!-- 채팅 인터페이스 -->
-    <div class="chat-interface" v-else>
+    <div class="chat-interface" v-else-if="step === 'chat'">
       <div class="chat-header">
         <h3>채팅방: {{ currentRoom }}</h3>
         <button @click="leaveChatRoom" class="leave-btn">나가기</button>
@@ -105,6 +170,9 @@
 import {ref, computed, nextTick, watch, onMounted} from 'vue'
 import {useMqttChat} from '@/composables/useMqtt.js'
 import {useSocketio} from "@/composables/useSocketIo";
+import {useChatting} from '@/composables/useChatting.js'
+
+const step = ref('createRoom')
 
 // Composable 사용
 const {
@@ -143,12 +211,22 @@ const {
   port: 9000,
 });
 
+
+const {
+  getRoomList,
+  getMemberList
+} =
+useChatting({});
+
+
 // 로컬 상태
 const newMessage = ref('')
 const showDebug = ref(false)
 const messagesContainer = ref(null)
 const roomName = ref('general')
 const isUserNameFromStore = ref(false) // 사용자명이 store에서 온 것인지 확인
+const members = ref([])
+const isLoading = ref(false)
 
 // loginStore에서 사용자명 설정
 onMounted(() => {
@@ -171,12 +249,24 @@ const displayMessages = computed(() => {
   )
 })
 
+const memberList = async () => {
+  try {
+    const list = await getMemberList()  // await로 값 받아오기
+    console.log('members:', list)
+    members.value = list
+  } catch (error){
+    console.error('연결 실패:', error)
+    alert(`연결 실패: ${error.message}`)
+  }
+}
+
 // 연결 및 채팅방 입장
 const connectAndJoin = async () => {
   try {
     await connectMqtt()
     await connectSocket()
     await joinRoom(roomName.value, userName.value)
+    step.value = 'chat';
   } catch (error) {
     console.error('연결 실패:', error)
     alert(`연결 실패: ${error.message}`)
@@ -235,6 +325,13 @@ watch(
     scrollToBottom()
   }
 )
+
+watch(step, (newVal) => {
+  if (newVal === 'createRoom') {
+    memberList()
+  }
+}, { immediate: true }) // immediate: true → 최초 로딩 시에도 실행
+
 </script>
 
 <style scoped>
